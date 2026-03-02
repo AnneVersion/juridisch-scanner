@@ -183,6 +183,14 @@ function connectServer() {
   if (!url.startsWith('http')) url = 'http://' + url;
   url = url.replace(/\/+$/, '');
 
+  // Waarschuw bij mixed content (HTTPS pagina → HTTP server)
+  if (location.protocol === 'https:' && url.startsWith('http://')) {
+    var dot = document.getElementById('serverDot');
+    dot.className = 'dot dot-err';
+    toast('HTTPS pagina kan niet verbinden met HTTP server. Open de scanner via: ' + url + '/scanner');
+    return;
+  }
+
   var dot = document.getElementById('serverDot');
   dot.className = 'dot dot-wait';
 
@@ -394,11 +402,24 @@ function saveAsPdf() {
 
 // ---- Init ----
 (function() {
-  // Herstel opgeslagen server URL
-  var saved = localStorage.getItem('ja_server_url');
-  if (saved) {
-    document.getElementById('serverUrl').value = saved;
+  // Check of we lokaal draaien (geserveerd door Flask) of extern (GitHub Pages)
+  var isLocal = (location.hostname !== '' &&
+    !location.hostname.endsWith('.github.io') &&
+    !location.hostname.endsWith('.pages.dev'));
+
+  if (isLocal) {
+    // Lokaal: automatisch verbinden met eigen server, verberg server balk
+    document.getElementById('serverBar').style.display = 'none';
+    var localUrl = location.protocol + '//' + location.host;
+    document.getElementById('serverUrl').value = localUrl;
     connectServer();
+  } else {
+    // Extern: toon server balk, herstel opgeslagen URL
+    var saved = localStorage.getItem('ja_server_url');
+    if (saved) {
+      document.getElementById('serverUrl').value = saved;
+      connectServer();
+    }
   }
 
   // Auto bestandsnaam
